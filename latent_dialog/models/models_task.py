@@ -103,6 +103,7 @@ class HDNO(BaseModel):
         self.gauss_kl = NormKLLoss(unit_average=True)
         self.zero = cast_type(th.zeros(1), FLOAT, self.use_gpu)
         self.act_loss = nn.BCEWithLogitsLoss()
+        self.sig = nn.Sigmoid()
 
 
     def valid_loss(self, losses, batch_cnt=None):
@@ -150,7 +151,7 @@ class HDNO(BaseModel):
 
         # pred action
         action_logits = self.relu(self.predict_action(th.cat([x_z, x_enc], dim=1)))  # [batch, action_label_len]
-        action_prob = nn.Sigmoid(action_logits)
+        action_prob = self.sig(action_logits)
         
         # create decoder dict
         decoder_settings = {}
@@ -278,7 +279,7 @@ class HDNO(BaseModel):
         joint_logpz = th.sum(logprob_x_sample_z, dim=1)
 
         # pred action
-        action_prob = nn.Sigmoid(self.relu(self.predict_action(th.cat([x_sample_z, x_enc], dim=1)))) # [batch, action_label_len]
+        action_prob = self.sig(self.relu(self.predict_action(th.cat([x_sample_z, x_enc], dim=1)))) # [batch, action_label_len]
 
         # decode
         dec_init_state = self.relu(self.z_embedding_x2y(th.cat([x_sample_z, x_enc], dim=1))).unsqueeze(0)

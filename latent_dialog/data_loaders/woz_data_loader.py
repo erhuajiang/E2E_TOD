@@ -179,9 +179,7 @@ class MultiWozDataLoader(BaseDataLoader):
             vec_out_utts[b_id, :vec_out_lens[b_id]] = out_utts[b_id]
             for i, d in enumerate(self.domains):
                 vec_goals_list[i][b_id, :] = goals[b_id][d]
-        print(vec_out_act.shape)
-        print("111111111111111")
-
+        
         return Pack(context_lens=vec_ctx_lens, # (batch_size, )
                     contexts=vec_ctx_utts, # (batch_size, max_ctx_len, max_utt_len)
                     output_lens=vec_out_lens, # (batch_size, )

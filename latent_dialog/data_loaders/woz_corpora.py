@@ -68,7 +68,6 @@ class MultiWozCorpus(object):
                     pass
                 labels.append(turn_labels.copy())
             new_action_data[key] = labels
-        print(new_action_data)
 
         train_data = self._process_dialogue(train_data, "Train", new_action_data)
         valid_data = self._process_dialogue(valid_data, "Val", new_action_data)

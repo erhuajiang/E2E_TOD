@@ -45,6 +45,7 @@ class MultiWozDataLoader(BaseDataLoader):
                 s_idx = max(0, e_idx - 1)
                 response = dlg.dlg[i].copy()
                 response['utt'] = self.pad_to(self.max_utt_len, response.utt, do_pad=False)
+                print(response.act)
                 resp_set.add(json.dumps(response.utt))
                 context = []
                 for turn in dlg.dlg[s_idx: e_idx]:

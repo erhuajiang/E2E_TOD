@@ -132,7 +132,6 @@ class HDNO(BaseModel):
         bs = self.np2var(data_feed['bs'],FLOAT)
         db = self.np2var(data_feed['db'],FLOAT)
         act = self.np2var(data_feed['act'], FLOAT)
-        print(act.size())
 
         # prior ~ N(0,0.1)
         prior_mu = self.np2var(0.0*np.ones((batch_size,1)), FLOAT)

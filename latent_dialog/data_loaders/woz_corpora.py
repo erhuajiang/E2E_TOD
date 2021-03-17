@@ -61,6 +61,7 @@ class MultiWozCorpus(object):
                         for pair in pairs:
                             slot = pair[0.0].lower()
                             act = domain + '-' + type_act + '-' + slot
+                            print(act)
                             if act in self.actions:
                                 active_id = self.actions.index(act)
                                 turn_labels[active_id] = 1.0

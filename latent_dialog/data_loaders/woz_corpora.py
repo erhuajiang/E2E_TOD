@@ -55,15 +55,17 @@ class MultiWozCorpus(object):
             labels = []
             for t_id, actions in raw_act.items():
                 turn_labels = [0.0] * len(self.actions)
-                for domain_type, pairs in actions.items():
-                    domain, type_act = domain_type.lower().split("-")
-                    for pair in pairs:
-                        slot = pair[0.0].lower()
-                        act = domain + '-' + type_act + '-' + slot
-                        print(act)
-                        if act in self.actions:
-                            active_id = self.actions.index(act)
-                            turn_labels[active_id] = 1.0
+                try:
+                    for domain_type, pairs in actions.items():
+                        domain, type_act = domain_type.lower().split("-")
+                        for pair in pairs:
+                            slot = pair[0].lower()
+                            act = domain + '-' + type_act + '-' + slot
+                            if act in self.actions:
+                                active_id = self.actions.index(act)
+                                turn_labels[active_id] = 1.0
+                except Exception as e:
+                    pass
                 labels.append(turn_labels.copy())
             new_action_data[key] = labels
         print(new_action_data)

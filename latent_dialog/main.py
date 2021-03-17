@@ -404,6 +404,7 @@ def generate(model, data, config, evaluator, verbose=True, dest_f=None, vec_f=No
     task_report, success, match, bleu  = evaluator.evaluateModel(generated_dialogs, real_dialogues=real_dialogs, mode=data.name)
 
     logger.debug('Generation Done')
+    logger.debug('Action Acc: %s ' % action_acc)
     logger.info(task_report)
     logger.debug('-' * 40)
     return success, match, bleu, action_acc

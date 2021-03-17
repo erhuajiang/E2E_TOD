@@ -23,6 +23,8 @@ class MultiWozCorpus(object):
         self.config = config
         self.tokenize = lambda x: x.split()
         self.train_corpus, self.val_corpus, self.test_corpus = self._read_file(self.config)
+        self.actions = ['attraction-inform-addr', 'attraction-inform-area', 'attraction-inform-choice', 'attraction-inform-fee', 'attraction-inform-name', 'attraction-inform-none', 'attraction-inform-open', 'attraction-inform-phone', 'attraction-inform-post', 'attraction-inform-price', 'attraction-inform-type', 'attraction-request-area', 'attraction-request-name', 'attraction-request-price', 'attraction-request-type', 'hotel-inform-addr', 'hotel-inform-area', 'hotel-inform-choice', 'hotel-inform-internet', 'hotel-inform-name', 'hotel-inform-none', 'hotel-inform-parking', 'hotel-inform-phone', 'hotel-inform-post', 'hotel-inform-price', 'hotel-inform-ref', 'hotel-inform-stars', 'hotel-inform-type', 'hotel-request-area', 'hotel-request-internet', 'hotel-request-name', 'hotel-request-parking', 'hotel-request-price', 'hotel-request-stars', 'hotel-request-type', 'restaurant-inform-addr', 'restaurant-inform-area', 'restaurant-inform-choice', 'restaurant-inform-food', 'restaurant-inform-name', 'restaurant-inform-none', 'restaurant-inform-phone', 'restaurant-inform-post', 'restaurant-inform-price', 'restaurant-inform-ref', 'restaurant-request-area', 'restaurant-request-food', 'restaurant-request-name', 'restaurant-request-price', 'taxi-inform-arrive', 'taxi-inform-car', 'taxi-inform-depart', 'taxi-inform-dest', 'taxi-inform-leave', 'taxi-inform-none', 'taxi-inform-phone', 'taxi-request-arrive', 'taxi-request-depart', 'taxi-request-dest', 'taxi-request-leave', 'train-inform-arrive', 'train-inform-choice', 'train-inform-day', 'train-inform-depart', 'train-inform-dest', 'train-inform-id', 'train-inform-leave', 'train-inform-none', 'train-inform-people', 'train-inform-ref', 'train-inform-ticket', 'train-inform-time', 'train-request-arrive', 'train-request-day', 'train-request-depart', 'train-request-dest', 'train-request-leave', 'train-request-people']
+
 
         vocab_file = DATA_DIR + config.data_name + '/vocab.json'
         if os.path.exists(vocab_file):
@@ -43,33 +45,58 @@ class MultiWozCorpus(object):
         train_path = DATA_DIR + config.data_name + '/train_dials.json'
         val_path = DATA_DIR + config.data_name + '/val_dials.json'
         test_path = DATA_DIR + config.data_name + '/test_dials.json'
+        action_path = DATA_DIR + config.data_name + '/system_acts.json'
         train_data = json.load(open(train_path))
         valid_data = json.load(open(val_path))
         test_data = json.load(open(test_path))
+        action_data = json.load(open(action_path))
 
-        train_data = self._process_dialogue(train_data, "Train")
-        valid_data = self._process_dialogue(valid_data, "Val")
-        test_data = self._process_dialogue(test_data, "Test")
+        new_action_data = {}
+        for key, raw_act in action_data.items():
+            labels = []
+            for t_id, actions in raw_act.items():
+                turn_labels = [0.0] * len(self.actions)
+                try:
+                    for domain_type, pairs in actions.items():
+                        domain, type_act = domain_type.lower().split("-")
+                        for pair in pairs:
+                            slot = pair[0.0]
+                        act = domain + '-' + type + '-' + slot
+                        if act in self.actions:
+                            active_id = self.actions.index(act)
+                            turn_labels[active_id] = 1.0
+                except Exception as e:
+                    pass
+                labels.append(turn_labels)
+            new_action_data[key] = labels
+
+        train_data = self._process_dialogue(train_data, "Train", new_action_data)
+        valid_data = self._process_dialogue(valid_data, "Val", new_action_data)
+        test_data = self._process_dialogue(test_data, "Test", new_action_data)
 
         return train_data, valid_data, test_data
 
-    def _process_dialogue(self, data, mode):
+    def _process_dialogue(self, data, mode, action):
         new_dlgs = []
         all_sent_lens = []
         all_dlg_lens = []
 
         for key, raw_dlg in data.items():
             # raw_dlg.keys: ['sys', 'bs', 'db', 'goal', 'usr']
-            norm_dlg = [Pack(speaker=USR, utt=[BOS, BOD, EOS], bs=[0.0]*self.bs_size, db=[0.0]*self.db_size)]
+            norm_dlg = [Pack(speaker=USR, utt=[BOS, BOD, EOS], bs=[0.0]*self.bs_size, db=[0.0]*self.db_size, act=[0.0]*len(self.actions))]
 
             for t_id in range(len(raw_dlg['db'])):
                 usr_utt = [BOS] + self.tokenize(raw_dlg['usr'][t_id]) + [EOS]
                 sys_utt = [BOS] + self.tokenize(raw_dlg['sys'][t_id]) + [EOS]
-                norm_dlg.append(Pack(speaker=USR, utt=usr_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id]))
-                norm_dlg.append(Pack(speaker=SYS, utt=sys_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id]))
+                if key in action and t_id < len(action[key]):
+                    act = action[key][t_id]
+                else:
+                    act = [0.0]*len(self.actions)
+                norm_dlg.append(Pack(speaker=USR, utt=usr_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id], act=act))
+                norm_dlg.append(Pack(speaker=SYS, utt=sys_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id], act=act))
                 all_sent_lens.extend([len(usr_utt), len(sys_utt)])
             # To stop dialog
-            norm_dlg.append(Pack(speaker=USR, utt=[BOS, EOD, EOS], bs=[0.0]*self.bs_size, db=[0.0]*self.db_size))
+            norm_dlg.append(Pack(speaker=USR, utt=[BOS, EOD, EOS], bs=[0.0]*self.bs_size, db=[0.0]*self.db_size, act=[0.0]*len(self.actions)))
             # if self.config.to_learn == 'usr':
             #     norm_dlg.append(Pack(speaker=USR, utt=[BOS, EOD, EOS], bs=[0.0]*self.bs_size, db=[0.0]*self.db_size))
             all_dlg_lens.append(len(raw_dlg['db']))

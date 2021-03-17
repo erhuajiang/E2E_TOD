@@ -97,12 +97,12 @@ class MultiWozDataLoader(BaseDataLoader):
         ctx_utts, ctx_lens = [], []
         out_utts, out_lens = [], []
 
-        out_bs, out_db = [] , []
+        out_bs, out_db, out_act = [], [], []
         goals, goal_lens = [], [[] for _ in range(len(self.domains))]
         keys = []
 
         # bs_{t-1}, bs_{t+1}, db_{t-1}, db_{t+1}
-        out_bs_prev, out_bs_next, out_db_prev, out_db_next = [] , [], [], []
+        out_bs_prev, out_bs_next, out_db_prev, out_db_next , out_act_prev, out_act_next = [] , [], [], [], [], []
 
         for j, row in enumerate(rows):
             in_row, out_row, goal_row = row.context, row.response, row.goal
@@ -122,19 +122,23 @@ class MultiWozDataLoader(BaseDataLoader):
 
             out_bs.append(out_row.bs)
             out_db.append(out_row.db)
+            out_act.append(out_row.act)
 
             # :
             if j==0:
                 out_bs_prev.append(np.zeros_like(out_bs[0]))
                 out_db_prev.append(np.zeros_like(out_db[0]))
+                out_act_prev.append(np.zeros_like(out_act[0]))
             else:
                 out_bs_prev.append(out_bs[-2])
                 out_db_prev.append(out_db[-2])
+                out_act_prev.append(out_act[-2])
             if j==0:
                 pass
             else:
                 out_bs_next.append(out_bs[-1])
                 out_db_next.append(out_db[-1])
+                out_act_next.append(out_act[-1])
 
 
             # goal
@@ -145,6 +149,7 @@ class MultiWozDataLoader(BaseDataLoader):
         # :
         out_bs_next.append(np.zeros_like(out_bs[0]))
         out_db_next.append(np.zeros_like(out_db[0]))
+        out_act_next.append(np.zeros_like(out_act[0]))
         vec_out_bs_next = np.array(out_bs_next) # (batch_size, 94)
         vec_out_db_next = np.array(out_db_next) # (batch_size, 30)
         vec_out_bs_prev = np.array(out_bs_prev) # (batch_size, 94)
@@ -157,6 +162,7 @@ class MultiWozDataLoader(BaseDataLoader):
         vec_ctx_utts = np.zeros((batch_size, max_ctx_len, self.max_utt_len), dtype=np.int32)
         vec_out_bs = np.array(out_bs) # (batch_size, 94)
         vec_out_db = np.array(out_db) # (batch_size, 30)
+        vec_out_act = np.array(out_act)  # (batch_size, len(action label))
         vec_out_lens = np.array(out_lens)  # (batch_size, ), number of tokens
         max_out_len = np.max(vec_out_lens)
         vec_out_utts = np.zeros((batch_size, max_out_len), dtype=np.int32)
@@ -185,7 +191,8 @@ class MultiWozDataLoader(BaseDataLoader):
                     bs_next=vec_out_bs_next,
                     bs_prev=vec_out_bs_prev,
                     db_next=vec_out_db_next,
-                    db_prev=vec_out_db_prev
+                    db_prev=vec_out_db_prev,
+                    act=vec_out_act  # (batch_size, len(action label))
                     )
 
     def clone(self):

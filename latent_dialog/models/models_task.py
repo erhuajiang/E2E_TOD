@@ -25,6 +25,7 @@ class HDNO(BaseModel):
         self.pad_id = self.vocab_dict[PAD]
         self.bs_size = corpus.bs_size
         self.db_size = corpus.db_size
+        self.act_size = len(corpus.actions)
         self.y_size = config.y_size
         self.beta = config.beta
         self.gamma = config.gamma
@@ -57,6 +58,9 @@ class HDNO(BaseModel):
 
         ### decoder 
         self.z_embedding_x2y = nn.Linear(self.y_size + self.utt_encoder.output_size + self.bs_size + self.db_size, self.config.dec_cell_size, bias=True)
+
+        ### action prediction layer
+        self.predict_action = nn.Linear(self.y_size + self.utt_encoder.output_size + self.bs_size + self.db_size, self.act_size, bias=True)
 
         self.decoder_x2y = DecoderRNN(input_dropout_p=self.config.dropout,
                                   rnn_cell=self.config.dec_rnn_cell,
@@ -98,6 +102,7 @@ class HDNO(BaseModel):
         self.nll = NLLEntropy(self.pad_id, self.config.avg_type)
         self.gauss_kl = NormKLLoss(unit_average=True)
         self.zero = cast_type(th.zeros(1), FLOAT, self.use_gpu)
+        self.act_loss = nn.BCEWithLogitsLoss()
 
 
     def valid_loss(self, losses, batch_cnt=None):
@@ -126,6 +131,7 @@ class HDNO(BaseModel):
         ### bs, db  
         bs = self.np2var(data_feed['bs'],FLOAT)
         db = self.np2var(data_feed['db'],FLOAT)
+        act = self.np2var(data_feed['act'], FLOAT)
 
         # prior ~ N(0,0.1)
         prior_mu = self.np2var(0.0*np.ones((batch_size,1)), FLOAT)
@@ -141,6 +147,9 @@ class HDNO(BaseModel):
             x_z = x_q_mu
         else:
             x_z = self.gauss_connector(x_q_mu, x_q_logvar)
+
+        # pred action
+        action_logits = self.relu(self.predict_action(th.cat([x_z, x_enc], dim=1)))  # [batch, action_label_len]
 
         # create decoder dict
         decoder_settings = {}
@@ -216,7 +225,10 @@ class HDNO(BaseModel):
                     kl_loss = self.gauss_kl(q_mu, q_logvar, prior_mu, prior_logvar)
                     result['pi_kl'] = kl_loss
                 # loss for cond likelihood
-                result['nll_%s'%name] = self.nll(dec_outputs, labels) 
+                result['nll_%s'%name] = self.nll(dec_outputs, labels)
+                
+                # loss for action
+                result["action_loss"] = self.act_loss(action_logits, act)
         return result
 
 
@@ -238,6 +250,7 @@ class HDNO(BaseModel):
         ### user_bs, sys_utt, user_db, sys_db 
         bs = self.np2var(data_feed['bs'],FLOAT)
         db = self.np2var(data_feed['db'],FLOAT)
+        act = self.np2var(data_feed['act'], FLOAT)
 
         # encode for x
         user_utt_summary, _, _ = self.utt_encoder(user_utts.unsqueeze(1))
@@ -260,7 +273,10 @@ class HDNO(BaseModel):
         else:
             logprob_x_sample_z = self.gaussian_logprob(x_q_mu, x_q_logvar, x_sample_z)
         joint_logpz = th.sum(logprob_x_sample_z, dim=1)
-        
+
+        # pred action
+        action_prob = nn.Sigmoid(self.relu(self.predict_action(th.cat([x_sample_z, x_enc], dim=1)))) # [batch, action_label_len]
+
         # decode
         dec_init_state = self.relu(self.z_embedding_x2y(th.cat([x_sample_z, x_enc], dim=1))).unsqueeze(0)
         if self.config.dec_rnn_cell == 'lstm':
@@ -309,4 +325,4 @@ class HDNO(BaseModel):
         else:
             disc_logprob = []
             disc_logprob_np = []
-        return logprobs, outs, joint_logpz, x_sample_z, disc_logprob, disc_logprob_np
+        return logprobs, outs, joint_logpz, x_sample_z, disc_logprob, disc_logprob_np, action_prob, act

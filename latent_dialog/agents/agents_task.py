@@ -161,7 +161,7 @@ class HierarchicalRlAgent(RlAgent):
         self.logprobs = dict(high_level=[], low_level=[], low_level_org=[])
         self.dlg_history =[]
         batch_size = len(batch['keys'])
-        logprobs, outs, logprob_z, sample_z, log_softmax, log_softmax_np = self.model.forward_rl(batch, max_words, temp, self.args)
+        logprobs, outs, logprob_z, sample_z, log_softmax, log_softmax_np, action_prob, act = self.model.forward_rl(batch, max_words, temp, self.args)
 
         if self.args.kl:
             prior_mu = self.model.np2var(0.0*np.ones((1,1)), FLOAT)
@@ -210,6 +210,11 @@ class HierarchicalRlAgent(RlAgent):
             report, success, match, bleu = evaluator.evaluateModel(generated_dialog, real_dialogues=real_dialogues, mode="offline_rl")
         else:
             report, success, match, bleu = evaluator.evaluateModel(generated_dialog, real_dialogues=False, mode="offline_rl")
+        
+        # acc for action
+        print(type(action_prob))
+        print(type(act))
+        
         return report, success, match, bleu, nll_reward, nll_reward_np
 
     def preprocess_common_reward(self, reward, all_rewards):

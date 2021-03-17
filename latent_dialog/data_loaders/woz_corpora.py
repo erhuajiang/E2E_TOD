@@ -66,7 +66,7 @@ class MultiWozCorpus(object):
                                 turn_labels[active_id] = 1.0
                 except Exception as e:
                     pass
-                labels.append(turn_labels)
+                labels.append(turn_labels.copy())
             new_action_data[key] = labels
 
         train_data = self._process_dialogue(train_data, "Train", new_action_data)

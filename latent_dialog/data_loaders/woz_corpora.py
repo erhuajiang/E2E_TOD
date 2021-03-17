@@ -91,6 +91,7 @@ class MultiWozCorpus(object):
                     act = action[key][t_id]
                 else:
                     act = [0.0]*len(self.actions)
+                print(act)
                 norm_dlg.append(Pack(speaker=USR, utt=usr_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id], act=act))
                 norm_dlg.append(Pack(speaker=SYS, utt=sys_utt, db=raw_dlg['db'][t_id], bs=raw_dlg['bs'][t_id], act=act))
                 all_sent_lens.extend([len(usr_utt), len(sys_utt)])

@@ -61,10 +61,10 @@ class MultiWozCorpus(object):
                         domain, type_act = domain_type.lower().split("-")
                         for pair in pairs:
                             slot = pair[0.0]
-                        act = domain + '-' + type + '-' + slot
-                        if act in self.actions:
-                            active_id = self.actions.index(act)
-                            turn_labels[active_id] = 1.0
+                            act = domain + '-' + type + '-' + slot
+                            if act in self.actions:
+                                active_id = self.actions.index(act)
+                                turn_labels[active_id] = 1.0
                 except Exception as e:
                     pass
                 labels.append(turn_labels)

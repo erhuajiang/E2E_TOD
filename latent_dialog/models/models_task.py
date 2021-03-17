@@ -150,7 +150,8 @@ class HDNO(BaseModel):
 
         # pred action
         action_logits = self.relu(self.predict_action(th.cat([x_z, x_enc], dim=1)))  # [batch, action_label_len]
-
+        action_prob = nn.Sigmoid(action_logits)
+        
         # create decoder dict
         decoder_settings = {}
 
@@ -184,6 +185,8 @@ class HDNO(BaseModel):
                                                                         beam_size=self.config.beam_size)  # (batch_size, goal_nhid)
                 if mode == GEN: # only return x->y when GEN mode
                     ret_dict['sample_z'] = z
+                    ret_dict['action_prob'] = action_prob
+                    ret_dict['action_label'] = act
                     return ret_dict, labels
                 # option to learn disc
                 if self.config.disc: 

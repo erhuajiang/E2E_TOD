@@ -260,13 +260,13 @@ def train(model, train_data, val_data, config, evaluator):
         logger.info('==== Evaluating Model ====')
 
         # Generation (bleu/success/match)
-        success, match, bleu = generate(model, val_data, config, evaluator)
+        success, match, bleu, action_acc = generate(model, val_data, config, evaluator)
 
         # Validation (loss)
         logger.info(train_loss.pprint('Train'))
         valid_loss = validate(model, val_data, config, batch_cnt)
 
-        stats = {'val/success': success, 'val/match': match, 'val/bleu': bleu, "val/loss": valid_loss}
+        stats = {'val/success': success, 'val/match': match, 'val/bleu': bleu, 'val/acc': action_acc, "val/loss": valid_loss}
         tb_logger.add_scalar_summary(stats, batch_cnt)
 
         if epoch >= config.warmup:
@@ -357,6 +357,13 @@ def generate(model, data, config, evaluator, verbose=True, dest_f=None, vec_f=No
         keys = batch['keys']
 
         sample_z = outputs["sample_z"].cpu().data.numpy()
+        action_prob = outputs["action_prob"].cpu().data.numpy()
+        action_label = outputs["action_label"].cpu().data.numpy()
+        pred_action_label = (action_prob > 0.5).reshape(-1)
+        action_label = action_label.reshape(-1)
+        action_acc = sum(pred_action_label == action_label) * 1.0 / len(action_label)
+
+        
 
         batch_size = pred_labels.shape[0]
         for b_id in range(batch_size):
@@ -399,7 +406,7 @@ def generate(model, data, config, evaluator, verbose=True, dest_f=None, vec_f=No
     logger.debug('Generation Done')
     logger.info(task_report)
     logger.debug('-' * 40)
-    return success, match, bleu
+    return success, match, bleu, action_acc
 
 
 

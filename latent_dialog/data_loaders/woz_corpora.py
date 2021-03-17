@@ -180,7 +180,7 @@ class MultiWozCorpus(object):
             for turn in dlg.dlg:
                 id_turn = Pack(utt=self._sent2id(turn.utt),
                                speaker=turn.speaker,
-                               db=turn.db, bs=turn.bs
+                               db=turn.db, bs=turn.bs, act=turn.act
                                )
                 id_dlg.append(id_turn)
             id_goal = self._goal2id(dlg.goal)

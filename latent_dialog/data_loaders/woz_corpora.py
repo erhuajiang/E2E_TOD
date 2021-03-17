@@ -59,7 +59,7 @@ class MultiWozCorpus(object):
                     for domain_type, pairs in actions.items():
                         domain, type_act = domain_type.lower().split("-")
                         for pair in pairs:
-                            slot = pair[0.0]
+                            slot = pair[0.0].lower()
                             act = domain + '-' + type + '-' + slot
                             if act in self.actions:
                                 active_id = self.actions.index(act)
